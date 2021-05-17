@@ -13,7 +13,7 @@ spi.max_speed_hz = 1000000
 spi.bits_per_word = 8
 
 request_timeout = 1  # zeit in sekunden
-request_delay = 2  # zeit in sekunden
+request_delay = 4  # zeit in sekunden
 
 shelly3EM = "192.168.178.49"
 shelly1PM = "192.168.178.53"
@@ -26,7 +26,8 @@ def convert_watts_to_poti(watts):
         # lineare funktion, weil ab 245 Watt nicht mehr parablelartig
         return linear(watts)
     elif watts < 245:
-        return parabel(watts)
+        parabel_value = parabel(watts)
+        return parabel_value if parabel_value >= 0 else 0
 
 
 def linear(watts):
@@ -43,9 +44,9 @@ def parabel(watts):
     x2 = (-b + math.sqrt(disc)) / (2 * a)
 
     if x1 <= 38:
-        return math.floor(x1)
+        return math.floor(x1 - 2.0)
     else:
-        return math.floor(x2)
+        return math.floor(x2 - 2.0)
 
 
 def on_value_calculated(value):
@@ -53,11 +54,11 @@ def on_value_calculated(value):
     if value <= 0:
         # wenn das haus nichts verbraucht, inverter abschalten, damit strom in die batterie geht
         converted_value = 0
-    elif 0 < value <= 500:
+    elif 0 < value <= 600:
         converted_value = convert_watts_to_poti(value)
-    elif value > 500:
-        # wenn das haus mehr als 500 verbraucht, den inverter auf maximal 500 setzen (daher die 90 -> 504W)
-        converted_value = 90
+    elif value > 600:
+        # wenn das haus mehr als 600 verbraucht, den inverter auf maximal 600 setzen (daher die 90 -> 504W)
+        converted_value = 110
     print("sending " + str(converted_value))
     spi.xfer2([int(converted_value)])
 
@@ -76,6 +77,9 @@ def executeCall():
     except requests.exceptions.ConnectionError as e:
         print("Es ist ein Fehler beim Verbinden mit PowerMeter aufgetreten")
         value_not_found = True
+    except requests.exceptions.ReadTimeout as e:
+        print("Es ist ein Fehler beim Verbinden mit PowerMeter aufgetreten")
+        value_not_found = True
 
     try:
         req_inverter = requests.get(shelly1PMUrl, timeout=request_timeout)
@@ -83,6 +87,9 @@ def executeCall():
             res_inverter = req_inverter.json()
             value_inverter = res_inverter["meters"][0]["power"]
     except requests.exceptions.ConnectionError as e:
+        print("Es ist ein Fehler beim Verbinden mit SUN1000 aufgetreten")
+        value_not_found = True
+    except requests.exceptions.ReadTimeout as e:
         print("Es ist ein Fehler beim Verbinden mit SUN1000 aufgetreten")
         value_not_found = True
 
