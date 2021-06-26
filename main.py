@@ -54,11 +54,11 @@ def on_value_calculated(value):
     if value <= 0:
         # wenn das haus nichts verbraucht, inverter abschalten, damit strom in die batterie geht
         converted_value = 0
-    elif 0 < value <= 600:
+    elif 0 < value <= 750:
         converted_value = convert_watts_to_poti(value)
-    elif value > 600:
-        # wenn das haus mehr als 600 verbraucht, den inverter auf maximal 600 setzen (daher die 90 -> 504W)
-        converted_value = 110
+    elif value > 750:
+        # wenn das haus mehr als 750 verbraucht, den inverter auf maximal 750 setzen (daher die 140 -> 750W)
+        converted_value = 140
     print("sending " + str(converted_value))
     spi.xfer2([int(converted_value)])
 
